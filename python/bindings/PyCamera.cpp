@@ -37,17 +37,17 @@ typedef struct {
 static PyObject* PyCamera_New( PyTypeObject *type, PyObject *args, PyObject *kwds )
 {
 	printf(LOG_PY_UTILS "PyCamera_New()\n");
-	
+
 	// allocate a new container
 	PyCamera_Object* self = (PyCamera_Object*)type->tp_alloc(type, 0);
-	
+
 	if( !self )
 	{
 		PyErr_SetString(PyExc_MemoryError, LOG_PY_UTILS "gstCamera tp_alloc() failed to allocate a new object");
 		printf(LOG_PY_UTILS "gstCamera tp_alloc() failed to allocate a new object\n");
 		return NULL;
 	}
-	
+
     self->camera = NULL;
     return (PyObject*)self;
 }
@@ -57,26 +57,30 @@ static PyObject* PyCamera_New( PyTypeObject *type, PyObject *args, PyObject *kwd
 static int PyCamera_Init( PyCamera_Object* self, PyObject *args, PyObject *kwds )
 {
 	printf(LOG_PY_UTILS "PyCamera_Init()\n");
-	
+
 	// parse arguments
 	int camera_width   = gstCamera::DefaultWidth;
 	int camera_height  = gstCamera::DefaultHeight;
+	int camera_fps     = gstCamera::DefaultFps;
 	const char* device = NULL;
 
-	static char* kwlist[] = {"width", "height", "camera", NULL};
+	static char* kwlist[] = {"width", "height", "fps", "camera", NULL};
 
-	if( !PyArg_ParseTupleAndKeywords(args, kwds, "|iis", kwlist, &camera_width, &camera_height, &device))
+	if( !PyArg_ParseTupleAndKeywords(args, kwds, "|iiis", kwlist, &camera_width, &camera_height, &camera_fps, &device) )
 	{
 		PyErr_SetString(PyExc_Exception, LOG_PY_UTILS "gstCamera.__init()__ failed to parse args tuple");
 		printf(LOG_PY_UTILS "gstCamera.__init()__ failed to parse args tuple\n");
 		return -1;
 	}
-  
-	if( camera_width <= 0 )	
+
+	if( camera_width <= 0 )
 		camera_width = gstCamera::DefaultWidth;
 
-	if( camera_height <= 0 )	
+	if( camera_height <= 0 )
 		camera_height = gstCamera::DefaultHeight;
+
+	if( camera_fps <= 0 )
+		camera_fps = gstCamera::DefaultFps;
 
 	/*if( camera_width <= 0 || camera_height <= 0 )
 	{
@@ -85,7 +89,7 @@ static int PyCamera_Init( PyCamera_Object* self, PyObject *args, PyObject *kwds 
 	}*/
 
 	// create the camera object
-	gstCamera* camera = gstCamera::Create(camera_width, camera_height, device);
+	gstCamera* camera = gstCamera::Create(camera_width, camera_height, camera_fps, device);
 
 	if( !camera )
 	{
@@ -109,7 +113,7 @@ static void PyCamera_Dealloc( PyCamera_Object* self )
 		delete self->camera;
 		self->camera = NULL;
 	}
-	
+
 	// free the container
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
@@ -130,7 +134,7 @@ static PyObject* PyCamera_Open( PyCamera_Object* self )
 		return NULL;
 	}
 
-	Py_RETURN_NONE; 
+	Py_RETURN_NONE;
 }
 
 
@@ -144,7 +148,7 @@ static PyObject* PyCamera_Close( PyCamera_Object* self )
 	}
 
 	self->camera->Close();
-	Py_RETURN_NONE; 
+	Py_RETURN_NONE;
 }
 
 
@@ -233,15 +237,27 @@ static PyObject* PyCamera_GetHeight( PyCamera_Object* self )
 	return PYLONG_FROM_UNSIGNED_LONG(self->camera->GetHeight());
 }
 
+// GetFps()
+static PyObject* PyCamera_GetFps( PyCamera_Object* self )
+{
+	if( !self || !self->camera )
+	{
+		PyErr_SetString(PyExc_Exception, LOG_PY_UTILS "gstCamera invalid object instance");
+		return NULL;
+	}
+
+	return PYLONG_FROM_UNSIGNED_LONG(self->camera->GetFps());
+}
+
 
 
 //-------------------------------------------------------------------------------
-static PyTypeObject pyCamera_Type = 
+static PyTypeObject pyCamera_Type =
 {
     PyVarObject_HEAD_INIT(NULL, 0)
 };
 
-static PyMethodDef pyCamera_Methods[] = 
+static PyMethodDef pyCamera_Methods[] =
 {
 	{ "Open", (PyCFunction)PyCamera_Open, METH_NOARGS, "Open the camera for streaming frames"},
 	{ "Close", (PyCFunction)PyCamera_Close, METH_NOARGS, "Stop streaming camera frames"},
@@ -265,15 +281,15 @@ bool PyCamera_RegisterTypes( PyObject* module )
 	pyCamera_Type.tp_init	  = (initproc)PyCamera_Init;
 	pyCamera_Type.tp_dealloc	  = (destructor)PyCamera_Dealloc;
 	pyCamera_Type.tp_doc  	  = "MIPI CSI or USB camera using GStreamer";
-	 
+
 	if( PyType_Ready(&pyCamera_Type) < 0 )
 	{
 		printf(LOG_PY_UTILS "gstCamera PyType_Ready() failed\n");
 		return false;
 	}
-	
+
 	Py_INCREF(&pyCamera_Type);
-    
+
 	if( PyModule_AddObject(module, "gstCamera", (PyObject*)&pyCamera_Type) < 0 )
 	{
 		printf(LOG_PY_UTILS "gstCamera PyModule_AddObject('gstCamera') failed\n");
@@ -283,7 +299,7 @@ bool PyCamera_RegisterTypes( PyObject* module )
 	return true;
 }
 
-static PyMethodDef pyCamera_Functions[] = 
+static PyMethodDef pyCamera_Functions[] =
 {
 	{NULL}  /* Sentinel */
 };
@@ -293,5 +309,3 @@ PyMethodDef* PyCamera_RegisterFunctions()
 {
 	return pyCamera_Functions;
 }
-
-

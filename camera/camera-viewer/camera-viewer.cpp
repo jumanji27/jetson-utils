@@ -42,10 +42,10 @@ void sig_handler(int signo)
 int main( int argc, char** argv )
 {
 	commandLine cmdLine(argc, argv);
-	
+
 	/*
 	 * attach signal handler
-	 */	
+	 */
 	if( signal(SIGINT, sig_handler) == SIG_ERR )
 		printf("\ncan't catch SIGINT\n");
 
@@ -54,6 +54,7 @@ int main( int argc, char** argv )
 	 */
 	gstCamera* camera = gstCamera::Create(cmdLine.GetInt("width", gstCamera::DefaultWidth),
 								   cmdLine.GetInt("height", gstCamera::DefaultHeight),
+								   cmdLine.GetInt("fps", gstCamera::DefaultFps),
 								   cmdLine.GetString("camera"));
 
 	if( !camera )
@@ -61,21 +62,22 @@ int main( int argc, char** argv )
 		printf("\ncamera-viewer:  failed to initialize camera device\n");
 		return 0;
 	}
-	
+
 	printf("\ncamera-viewer:  successfully initialized camera device\n");
 	printf("    width:  %u\n", camera->GetWidth());
 	printf("   height:  %u\n", camera->GetHeight());
+	printf("      fps:  %u\n", camera->GetFps());
 	printf("    depth:  %u (bpp)\n", camera->GetPixelDepth());
-	
+
 
 	/*
 	 * create openGL window
 	 */
 	glDisplay* display = glDisplay::Create();
-	
+
 	if( !display )
 		printf("camera-viewer:  failed to create openGL display\n");
-	
+
 
 	/*
 	 * start streaming
@@ -85,10 +87,10 @@ int main( int argc, char** argv )
 		printf("camera-viewer:  failed to open camera for streaming\n");
 		return 0;
 	}
-	
+
 	printf("camera-viewer:  camera open for streaming\n");
-	
-	
+
+
 	/*
 	 * processing loop
 	 */
@@ -96,7 +98,7 @@ int main( int argc, char** argv )
 	{
 		// capture latest image
 		float* imgRGBA = NULL;
-		
+
 		if( !camera->CaptureRGBA(&imgRGBA, 1000) )
 			printf("camera-viewer:  failed to capture RGBA image\n");
 
@@ -108,20 +110,20 @@ int main( int argc, char** argv )
 			// update status bar
 			char str[256];
 			sprintf(str, "Camera Viewer (%ux%u) | %.0f FPS", camera->GetWidth(), camera->GetHeight(), display->GetFPS());
-			display->SetTitle(str);	
+			display->SetTitle(str);
 
 			// check if the user quit
 			if( display->IsClosed() )
 				signal_recieved = true;
 		}
 	}
-	
+
 
 	/*
 	 * destroy resources
 	 */
 	printf("\ncamera-viewer:  shutting down...\n");
-	
+
 	SAFE_DELETE(camera);
 	SAFE_DELETE(display);
 

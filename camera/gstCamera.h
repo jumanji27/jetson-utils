@@ -49,7 +49,7 @@ enum gstCameraSrc
  * Stringize function to convert gstCameraSrc enum to text
  * @ingroup gstCamera
  */
-const char* gstCameraSrcToString( gstCameraSrc src );	
+const char* gstCameraSrcToString( gstCameraSrc src );
 
 
 /**
@@ -77,7 +77,7 @@ public:
 	 * and the `v4l2src` GStreamer element for capturing V4L2 cameras, like USB webcams.
 	 *
 	 * The camera will be created with a resolution indicated by gstCamera::DefaultWidth
-	 * and gstCamera::DefaultHeight (1280x720 by default).
+	 * and gstCamera::DefaultHeight (1280x720 by default) and gstCamera::DefaultFps (30).
 	 *
 	 * @param camera Camera device to use.  If using MIPI CSI, this string can be `NULL`
 	 *			  to default to CSI camera 0, otherwise the string should contain the
@@ -96,10 +96,10 @@ public:
 	 * gstCamera will use the `nvarguscamerasrc` GStreamer element for MIPI CSI cameras,
 	 * and the `v4l2src` GStreamer element for capturing V4L2 cameras, like USB webcams.
 	 *
-	 * @param width desired width (in pixels) of the camera resolution.  
+	 * @param width desired width (in pixels) of the camera resolution.
 	 *              This should be from a format that the camera supports.
 	 *
-	 * @param height desired height (in pixels) of the camera resolution.  
+	 * @param height desired height (in pixels) of the camera resolution.
 	 *               This should be from a format that the camera supports.
 	 *
 	 * @param camera Camera device to use.  If using MIPI CSI, this string can be `NULL`
@@ -111,8 +111,8 @@ public:
 	 *
 	 * @returns A pointer to the created gstCamera device, or NULL if there was an error.
 	 */
-	static gstCamera* Create( uint32_t width, uint32_t height, const char* camera=NULL );
-	
+	static gstCamera* Create( uint32_t width, uint32_t height, uint32_t fps, const char* camera=NULL );
+
 	/**
 	 * Release the camera interface and resources.
 	 * Destroying the camera will also Close() the stream if it is still open.
@@ -138,7 +138,7 @@ public:
 	 * exiting the program if you delete your camera object.
 	 */
 	void Close();
-	
+
 	/**
 	 * Check if the camera is streaming or not.
 	 * @returns `true` if the camera is streaming (open), or `false` if it's closed.
@@ -175,12 +175,12 @@ public:
 	 * with pixel intensities ranging between 0.0 and 255.0.
 	 *
 	 * Internally, CaptureRGBA() first calls Capture() and then ConvertRGBA().
-	 * The ConvertRGBA() function uses CUDA, so if you want to capture from a different 
+	 * The ConvertRGBA() function uses CUDA, so if you want to capture from a different
 	 * thread than your CUDA device, use the Capture() and ConvertRGBA() functions.
 	 *
 	 * @param[out] image Pointer that gets returned to the image in GPU address space,
 	 *                   or if the zeroCopy parameter is true, then the pointer is valid
-	 *                   in both CPU and GPU address spaces.  Do not manually free the image memory, 
+	 *                   in both CPU and GPU address spaces.  Do not manually free the image memory,
 	 *                   it is managed internally.  The image is in float4 RGBA format.
 	 *                   The size of the image is:  `GetWidth() * GetHeight() * sizeof(float) * 4`
 	 *
@@ -201,7 +201,7 @@ public:
 	 *               or error occurred, or if timeout was 0 and a frame wasn't ready.
 	 */
 	bool CaptureRGBA( float** image, uint64_t timeout=UINT64_MAX, bool zeroCopy=false );
-	
+
 	/**
 	 * Convert an image to float4 RGBA that was previously aquired with Capture().
 	 * This function uses CUDA to perform the colorspace conversion to float4 RGBA,
@@ -214,7 +214,7 @@ public:
 	 *
 	 * @param[out] output Pointer that gets returned to the image in GPU address space,
 	 *                    or if the zeroCopy parameter is true, then the pointer is valid
-	 *                    in both CPU and GPU address spaces.  Do not manually free the image memory, 
+	 *                    in both CPU and GPU address spaces.  Do not manually free the image memory,
 	 *                   it is managed internally.  The image is in float4 RGBA format.
 	 *                   The size of the image is:  `GetWidth() * GetHeight() * sizeof(float) * 4`
 	 *
@@ -223,11 +223,11 @@ public:
 	 *                     You would need to set zeroCopy to `true` if you wanted to
 	 *                     access the image pixels from the CPU.  Since this isn't
 	 *                     generally the case, the default is `false` (GPU only).
-	 * 
+	 *
 	 * @returns `true` on success, `false` if an error occurred.
 	 */
 	bool ConvertRGBA( void* input, float** output, bool zeroCopy=false );
-	
+
 	/**
 	 * Return the width of the camera.
 	 */
@@ -237,6 +237,11 @@ public:
 	 * Return the height of the camera.
 	 */
 	inline uint32_t GetHeight() const	   { return mHeight; }
+
+	/**
+	 * Return the height of the camera.
+	 */
+	inline uint32_t GetFps() const	     { return mFps; }
 
 	/**
 	 * Return the pixel bit depth of the camera (measured in bits).
@@ -255,7 +260,7 @@ public:
 	 *       take:  `GetWidth() * GetHeight() * sizeof(float) * 4`
 	 */
 	inline uint32_t GetSize() const	   { return mSize; }
-	
+
 	/**
 	 * Default camera width, unless otherwise specified during Create()
  	 */
@@ -265,7 +270,12 @@ public:
 	 * Default camera height, unless otherwise specified during Create()
  	 */
 	static const uint32_t DefaultHeight = 720;
-	
+
+	/**
+	 * Default camera fps, unless otherwise specified during Create()
+ 	 */
+	static const uint32_t DefaultFps = 30;
+
 private:
 	static void onEOS(_GstAppSink* sink, void* user_data);
 	static GstFlowReturn onPreroll(_GstAppSink* sink, void* user_data);
@@ -279,7 +289,7 @@ private:
 
 	void checkMsgBus();
 	void checkBuffer();
-	
+
 	_GstBus*     mBus;
 	_GstAppSink* mAppSink;
 	_GstElement* mPipeline;
@@ -290,22 +300,23 @@ private:
 
 	uint32_t mWidth;
 	uint32_t mHeight;
+	uint32_t mFps;
 	uint32_t mDepth;
 	uint32_t mSize;
 
 	static const uint32_t NUM_RINGBUFFERS = 16;
-	
+
 	void* mRingbufferCPU[NUM_RINGBUFFERS];
 	void* mRingbufferGPU[NUM_RINGBUFFERS];
-	
+
 	Event mWaitEvent;
 	Mutex mWaitMutex;
 	Mutex mRingMutex;
-	
+
 	uint32_t mLatestRGBA;
 	uint32_t mLatestRingbuffer;
 	bool     mLatestRetrieved;
-	
+
 	void*  mRGBA[NUM_RINGBUFFERS];
 	bool   mRGBAZeroCopy; // were the RGBA buffers allocated with zeroCopy?
 	bool   mStreaming;	  // true if the device is currently open
