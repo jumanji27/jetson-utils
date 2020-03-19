@@ -239,7 +239,7 @@ public:
 	inline uint32_t GetHeight() const	   { return mHeight; }
 
 	/**
-	 * Return the height of the camera.
+	 * Return the fps of the camera.
 	 */
 	inline uint32_t GetFps() const	     { return mFps; }
 
@@ -274,7 +274,7 @@ public:
 	/**
 	 * Default camera fps, unless otherwise specified during Create()
  	 */
-	static const uint32_t DefaultFps = 30;
+	static const uint32_t DefaultFps    = 30;
 
 private:
 	static void onEOS(_GstAppSink* sink, void* user_data);
