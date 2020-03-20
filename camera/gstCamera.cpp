@@ -418,9 +418,9 @@ bool gstCamera::buildLaunchStr( gstCameraSrc src )
 	#endif
 
 		if( src == GST_SOURCE_NVCAMERA )
-			ss << "nvcamerasrc fpsRange=" << mFps << " ! video/x-raw(memory:NVMM), width=(int)" << mWidth << ", height=(int)" << mHeight << ", format=(string)NV12 ! nvvidconv flip-method=" << flipMethod << " ! "; //'video/x-raw(memory:NVMM), width=(int)1920, height=(int)1080, format=(string)I420, framerate=(fraction)30/1' ! ";
+			ss << "nvcamerasrc fpsRange=" << mFps + " " + mFps << " ! video/x-raw(memory:NVMM), width=(int)" << mWidth << ", height=(int)" << mHeight << ", format=(string)NV12 ! nvvidconv flip-method=" << flipMethod << " ! "; //'video/x-raw(memory:NVMM), width=(int)1920, height=(int)1080, format=(string)I420, framerate=(fraction)30/1' ! ";
 		else if( src == GST_SOURCE_NVARGUS )
-			ss << "nvarguscamerasrc sensor-id=" << mSensorCSI << " ! video/x-raw(memory:NVMM), width=(int)" << mWidth << ", height=(int)" << mHeight << ", framerate=30/1, format=(string)NV12 ! nvvidconv flip-method=" << flipMethod << " ! ";
+			ss << "nvarguscamerasrc sensor-id=" << mSensorCSI << " ! video/x-raw(memory:NVMM), width=(int)" << mWidth << ", height=(int)" << mHeight << ", framerate=" << mFps << "/1, format=(string)NV12 ! nvvidconv flip-method=" << flipMethod << " ! ";
 
 		ss << "video/x-raw ! appsink name=mysink";
 	}
@@ -502,7 +502,7 @@ gstCamera* gstCamera::Create( uint32_t width, uint32_t height, uint32_t fps, con
 
 	cam->mWidth      = width;
 	cam->mHeight     = height;
-	cam->mFps        = ("%s %s", fps);
+	cam->mFps        = fps;
 	cam->mDepth      = cam->csiCamera() ? 12 : 24;	// NV12 or RGB
 	cam->mSize       = (width * height * cam->mDepth) / 8;
 
